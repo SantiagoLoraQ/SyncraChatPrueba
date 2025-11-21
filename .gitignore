@@ -1,0 +1,24 @@
+# --- Python ---
+# Archivos compilados que genera Python automáticamente
+__pycache__/
+*.py[cod]
+
+# --- Entornos Virtuales ---
+# No queremos subir las librerías instaladas
+venv/
+env/
+.env
+
+# --- Base de Datos ---
+# SQLite genera estos archivos, no deben subirse si contienen datos de prueba
+*.db
+*.sqlite3
+
+# --- IDEs (Editores de código) ---
+# Configuraciones de tu editor que no le sirven a nadie más
+.vscode/
+.idea/
+
+# --- Sistema Operativo ---
+.DS_Store
+Thumbs.db
