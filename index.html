@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syncra Chat</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        
+        /* Contenedor Principal */
+        .container { background: white; width: 400px; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+        
+        /* Pantallas */
+        #login-screen { text-align: center; }
+        #chat-screen { display: none; /* Oculto al inicio */ }
+
+        /* Login Styles */
+        input[type="text"] { width: 80%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; border: none; background-color: #28a745; color: white; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #218838; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-secondary:hover { background-color: #5a6268; }
+
+        /* Chat Styles */
+        #chat-box { height: 300px; overflow-y: scroll; border: 1px solid #eee; padding: 10px; margin-bottom: 10px; background: #fafafa; display: flex; flex-direction: column; }
+        .mensaje { padding: 8px 12px; margin: 5px 0; border-radius: 15px; max-width: 80%; word-wrap: break-word; }
+        .mi-mensaje { background-color: #dcf8c6; align-self: flex-end; text-align: right; }
+        .otro-mensaje { background-color: #e2e3e5; align-self: flex-start; text-align: left; }
+        .sistema { color: #888; font-size: 0.8em; text-align: center; align-self: center; background: none; }
+        
+        /* Input area chat */
+        .input-area { display: flex; gap: 5px; }
+        .input-area input { flex-grow: 1; margin: 0; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="login-screen">
+            <h2>Bienvenido a Syncra</h2>
+            <p>Ingresa tu nombre o entra como anónimo</p>
+            <input type="text" id="usernameInput" placeholder="Tu nombre (Opcional)">
+            <br>
+            <button onclick="conectarChat(true)">Entrar con Nombre</button>
+            <br><br>
+            <button class="btn-secondary" onclick="conectarChat(false)">Entrar como Anónimo</button>
+        </div>
+
+        <div id="chat-screen">
+            <h3 id="chat-header">💬 Chat Sala General</h3>
+            <div id="chat-box"></div>
+            <div class="input-area">
+                <input type="text" id="mensajeInput" placeholder="Escribe un mensaje...">
+                <button onclick="enviarMensaje()">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket;
+        let miUsuario = "";
+
+        // Función para conectar (llamada desde los botones de login)
+        function conectarChat(usarNombre) {
+            const inputNombre = document.getElementById("usernameInput");
+            
+            // Decidir nombre a enviar
+            if (usarNombre && inputNombre.value.trim() !== "") {
+                miUsuario = inputNombre.value.trim();
+            } else {
+                miUsuario = "ANONIMO"; // Palabra clave para el servidor
+            }
+
+            // Iniciar WebSocket
+            socket = new WebSocket("ws://localhost:8000");
+
+            // Eventos
+            socket.onopen = function() {
+                // 1. Enviar el nombre como PRIMER mensaje (Handshake)
+                socket.send(miUsuario);
+                
+                // 2. Cambiar de pantalla
+                document.getElementById("login-screen").style.display = "none";
+                document.getElementById("chat-screen").style.display = "block";
+                
+                if (miUsuario !== "ANONIMO") {
+                    document.getElementById("chat-header").innerText = "💬 Chat de " + miUsuario;
+                }
+            };
+
+            socket.onmessage = function(event) {
+                const data = event.data;
+                // Detectar si es mensaje de sistema o usuario
+                if (data.includes("se ha unido") || data.includes("ha salido") || data.includes("Conectado a Syncra")) {
+                    renderizarMensaje(data, "sistema");
+                } else {
+                    // El servidor envía "Nombre: Mensaje". Lo mostramos tal cual.
+                    renderizarMensaje(data, "otro-mensaje");
+                }
+            };
+            
+            socket.onclose = function() {
+                alert("Desconectado del servidor");
+                location.reload(); // Recargar para volver al login
+            };
+        }
+
+        function enviarMensaje() {
+            const input = document.getElementById("mensajeInput");
+            const texto = input.value;
+            if (texto.trim() === "") return;
+
+            socket.send(texto);
+            renderizarMensaje("Yo: " + texto, "mi-mensaje");
+            input.value = "";
+        }
+
+        function renderizarMensaje(texto, tipo) {
+            const chatBox = document.getElementById("chat-box");
+            const div = document.createElement("div");
+            div.textContent = texto;
+            div.className = "mensaje " + tipo;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Permitir enviar con Enter
+        document.getElementById("mensajeInput").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") enviarMensaje();
+        });
+    </script>
+</body>
+</html>
